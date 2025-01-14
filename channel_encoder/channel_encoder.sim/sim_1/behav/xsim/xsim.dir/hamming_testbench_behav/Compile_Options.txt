@@ -1,0 +1,1 @@
+--incr --debug "typical" --relax --mt "2" -L "xil_defaultlib" -L "secureip" --snapshot "hamming_testbench_behav" "xil_defaultlib.hamming_testbench" -log "elaborate.log" 

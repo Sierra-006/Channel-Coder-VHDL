@@ -1,0 +1,7 @@
+Running: xsim.dir/hamming_decoder_tb_behav/xsimk.exe -simmode gui -wdb hamming_decoder_tb_behav.wdb -simrunnum 0 -socket 59487
+Design successfully loaded
+Design Loading Memory Usage: 7332 KB (Peak: 7332 KB)
+Design Loading CPU Usage: 0 ms
+Simulation completed
+Simulation Memory Usage: 7764 KB (Peak: 7764 KB)
+Simulation CPU Usage: 31 ms

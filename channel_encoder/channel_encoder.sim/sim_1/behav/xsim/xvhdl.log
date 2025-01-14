@@ -1,0 +1,2 @@
+INFO: [VRFC 10-163] Analyzing VHDL file "C:/Vivado/channel_encoder/channel_encoder.srcs/sim_1/new/hamming_encoder_tb.vhd" into library xil_defaultlib
+INFO: [VRFC 10-3107] analyzing entity 'hamming_encoder_tb'
