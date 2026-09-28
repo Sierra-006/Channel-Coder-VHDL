@@ -1,135 +1,125 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 15.12.2024 18:16:49
--- Design Name: 
--- Module Name: hamming_testbench - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
+-- Round-trip testbench: encoder -> (optional single-bit error) -> decoder.
+-- For all 256 data values, checks data survives with no error and with
+-- each of the 12 possible single-bit errors.
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity hamming_testbench is
-end hamming_testbench;
+end entity;
 
 architecture Behavioral of hamming_testbench is
-    -- Signals for testing the encoder
-    signal data_in : STD_LOGIC_VECTOR(3 downto 0);
-    signal codeword_out : STD_LOGIC_VECTOR(6 downto 0);
 
-    -- Signals for testing the decoder
-    signal codeword_in : STD_LOGIC_VECTOR(6 downto 0);
-    signal data_out : STD_LOGIC_VECTOR(3 downto 0);
-    signal error_pos : std_logic;
+  constant CLK_PERIOD : time := 10 ns;
 
-    -- Internal signals for error injection
-    signal corrupted_codeword : STD_LOGIC_VECTOR(6 downto 0);
+  signal clk      : STD_LOGIC := '0';
+  signal done     : boolean := false;
 
-    -- Time constant
-    constant CLK_PERIOD : time := 8 ns;
+  -- Encoder side
+  signal enc_valid : STD_LOGIC := '0';
+  signal enc_din   : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
+  signal enc_dout  : STD_LOGIC_VECTOR(11 downto 0);
+  signal enc_ready : STD_LOGIC;
+
+  -- Channel: XOR mask injects errors
+  signal err_mask  : STD_LOGIC_VECTOR(11 downto 0) := (others => '0');
+  signal channel   : STD_LOGIC_VECTOR(11 downto 0);
+
+  -- Decoder side
+  signal dec_dout      : STD_LOGIC_VECTOR(7 downto 0);
+  signal dec_detect    : STD_LOGIC;
+  signal dec_corrected : STD_LOGIC;
+  signal dec_uncorr    : STD_LOGIC;
+  signal dec_ready     : STD_LOGIC;
 
 begin
-    -- Instantiate the encoder
-    uut_encoder: entity work.hamming_encoder
-        port map(
-            data_in => data_in,
-            data_out => codeword_out
-        );
 
-    -- Instantiate the decoder
-    uut_decoder: entity work.hamming_decoder
-        port map(
-            data_in => codeword_in,
-            data_out => data_out,
-            error_detect => error_pos
-        );
+  channel <= enc_dout xor err_mask;
 
-    -- Test process
-    test_process: process
+  uut_encoder : entity work.hamming_encoder
+    port map (
+      clk       => clk,
+      valid_in  => enc_valid,
+      data_in   => enc_din,
+      data_out  => enc_dout,
+      ready_out => enc_ready
+    );
+
+  uut_decoder : entity work.hamming_decoder
+    port map (
+      clk                 => clk,
+      valid_in            => enc_ready,
+      data_in             => channel,
+      data_out            => dec_dout,
+      error_detect        => dec_detect,
+      error_corrected     => dec_corrected,
+      uncorrectable_error => dec_uncorr,
+      ready_out           => dec_ready
+    );
+
+  clk_gen : process
+  begin
+    while not done loop
+      clk <= '0'; wait for CLK_PERIOD / 2;
+      clk <= '1'; wait for CLK_PERIOD / 2;
+    end loop;
+    wait;
+  end process;
+
+  test_process : process
+    variable errors : integer := 0;
+    variable d      : STD_LOGIC_VECTOR(7 downto 0);
+
+    -- mask_bit = -1 : no error, else flip codeword index mask_bit
+    procedure run(v : integer; mask_bit : integer) is
     begin
-        -- Test case 1: Encode and decode without error
-        data_in <= "1010"; -- Input data bits
-        wait for CLK_PERIOD;
+      d := std_logic_vector(to_unsigned(v, 8));
+      err_mask <= (others => '0');
+      if mask_bit >= 0 then
+        err_mask(mask_bit) <= '1';
+      end if;
+      enc_din   <= d;
+      enc_valid <= '1';
+      wait until rising_edge(clk);   -- encoder captures
+      enc_valid <= '0';
+      wait until rising_edge(clk);   -- decoder captures
+      wait for 1 ns;
 
-        -- Verify the encoded output
-        assert codeword_out = "1011010"
-        report "Test Case 1 Failed: Encoder output mismatch." severity error;
+      if dec_ready /= '1' or dec_dout /= d then
+        report "data=" & integer'image(v) & " errbit=" & integer'image(mask_bit)
+               & ": round trip mismatch" severity error;
+        errors := errors + 1;
+      end if;
+      if mask_bit < 0 then
+        if dec_detect /= '0' then
+          report "false error flag on clean word" severity error;
+          errors := errors + 1;
+        end if;
+      else
+        if dec_detect /= '1' or dec_corrected /= '1' or dec_uncorr /= '0' then
+          report "single error flags wrong, errbit=" & integer'image(mask_bit) severity error;
+          errors := errors + 1;
+        end if;
+      end if;
+    end procedure;
+  begin
+    wait for 2 * CLK_PERIOD;
 
-        -- Pass the encoded data to the decoder
-        codeword_in <= codeword_out;
-        wait for CLK_PERIOD;
+    for v in 0 to 255 loop
+      run(v, -1);
+      for p in 0 to 11 loop
+        run(v, p);
+      end loop;
+    end loop;
 
-        -- Verify the decoded output
-        assert data_out = "1010"
-        report "Test Case 1 Failed: Decoder output mismatch." severity error;
+    if errors = 0 then
+      report "hamming_testbench: ALL ROUND-TRIP TESTS PASSED" severity note;
+    else
+      report "hamming_testbench: " & integer'image(errors) & " ERRORS" severity failure;
+    end if;
+    done <= true;
+    wait;
+  end process;
 
-        -- Verify no error detected
-        assert error_pos = 0
-        report "Test Case 1 Failed: Error position mismatch." severity error;
-
-        -- Test case 2: Inject a single-bit error and decode
-        corrupted_codeword <= codeword_out;
-        corrupted_codeword(4) <= not corrupted_codeword(4); -- Flip bit at position 4
-        codeword_in <= corrupted_codeword;
-        wait for CLK_PERIOD;
-
-        -- Verify the decoded output matches the original input
-        assert data_out = "1010"
-        report "Test Case 2 Failed: Decoder output mismatch after correction." severity error;
-
-        -- Verify error position
-        assert error_pos = 4
-        report "Test Case 2 Failed: Error position mismatch after correction." severity error;
-
-        -- Test case 3: Another single-bit error
-        corrupted_codeword <= codeword_out;
-        corrupted_codeword(1) <= not corrupted_codeword(1); -- Flip bit at position 1
-        codeword_in <= corrupted_codeword;
-        wait for CLK_PERIOD;
-
-        -- Verify the decoded output matches the original input
-        assert data_out = "1010"
-        report "Test Case 3 Failed: Decoder output mismatch after correction." severity error;
-
-        -- Verify error position
-        assert error_pos = 1
-        report "Test Case 3 Failed: Error position mismatch after correction." severity error;
-
-        -- Test case 4: No error, different data input
-        data_in <= "1100"; -- Input data bits
-        wait for CLK_PERIOD;
-
-        -- Verify the encoded output
-        assert codeword_out = "0110110"
-        report "Test Case 4 Failed: Encoder output mismatch." severity error;
-
-        -- Pass the encoded data to the decoder
-        codeword_in <= codeword_out;
-        wait for CLK_PERIOD;
-
-        -- Verify the decoded output
-        assert data_out = "1100"
-        report "Test Case 4 Failed: Decoder output mismatch." severity error;
-
-        -- Verify no error detected
-        assert error_pos = 0
-        report "Test Case 4 Failed: Error position mismatch." severity error;
-
-        -- End simulation
-        report "All test cases passed successfully." severity note;
-        wait;
-    end process;
-end Behavioral;
+end architecture;
