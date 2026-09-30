@@ -7,9 +7,8 @@
 --              s(k) = parity of bits whose position has bit k set).
 --                syndrome = 0      : no error
 --                syndrome = 1..12  : single-bit error at that position, corrected
---                syndrome = 13..15 : not a valid single-bit error, uncorrectable
---              Note: some double-bit errors alias to syndrome 1..12 and are
---              miscorrected. Detecting all doubles needs an overall parity bit.
+--                syndrome = 13..15 : invalid position, error_detect only (no correction)
+--              error_pos = syndrome for 1..12, 0 otherwise.
 --              Outputs are registered, one clock after valid_in is sampled high.
 ----------------------------------------------------------------------------------
 
@@ -25,8 +24,8 @@ entity hamming_decoder is
     data_out            : out STD_LOGIC_VECTOR(7 downto 0);   -- Output: 8 data bits
     error_detect        : out STD_LOGIC;                      -- Syndrome nonzero
     error_corrected     : out STD_LOGIC;                      -- Single-bit error corrected
-    uncorrectable_error : out STD_LOGIC;                      -- Syndrome out of range
-    ready_out           : out STD_LOGIC                       -- Indicates outputs are valid
+    error_pos           : out STD_LOGIC_VECTOR(3 downto 0);   -- Error position 1..12, 0 = none
+    ready_out          : out STD_LOGIC                       -- Indicates outputs are valid
   );
 end entity;
 
@@ -35,7 +34,7 @@ architecture Behavioral of hamming_decoder is
   signal data_reg      : STD_LOGIC_VECTOR(7 downto 0) := (others => '0');
   signal detect_reg    : STD_LOGIC := '0';
   signal corrected_reg : STD_LOGIC := '0';
-  signal uncorr_reg    : STD_LOGIC := '0';
+  signal pos_reg       : STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
   signal ready_reg     : STD_LOGIC := '0';
 
 begin
@@ -47,6 +46,10 @@ begin
   begin
     if rising_edge(clk) then
       if valid_in = '1' then
+        detect_reg    <= '0';
+        corrected_reg <= '0';
+        pos_reg       <= (others => '0');
+
         frame := data_in;
 
         -- Syndrome bit k = XOR of every bit whose position has bit k set
@@ -61,17 +64,12 @@ begin
 
         err_pos := to_integer(unsigned(syndrome));
 
-        detect_reg    <= '0';
-        corrected_reg <= '0';
-        uncorr_reg    <= '0';
-
         if err_pos /= 0 then
           detect_reg <= '1';
           if err_pos <= 12 then
             frame(err_pos - 1) := not frame(err_pos - 1);
             corrected_reg <= '1';
-          else
-            uncorr_reg <= '1';
+            pos_reg       <= syndrome;  -- syndrome 13..15 leaves error_pos at 0
           end if;
         end if;
 
@@ -88,7 +86,7 @@ begin
   data_out            <= data_reg;
   error_detect        <= detect_reg;
   error_corrected     <= corrected_reg;
-  uncorrectable_error <= uncorr_reg;
-  ready_out           <= ready_reg;
+  error_pos           <= pos_reg;
+  ready_out          <= ready_reg;
 
 end architecture;

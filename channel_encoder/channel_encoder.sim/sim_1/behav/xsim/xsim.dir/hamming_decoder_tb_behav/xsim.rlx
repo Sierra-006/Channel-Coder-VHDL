@@ -1,11 +1,11 @@
 
 { 
-    crc :  1212606241713632931  , 
+    crc :  3400093637993373472  , 
     ccp_crc :  0  , 
-    cmdline : " --incr --debug typical --relax --mt 2 -L xil_defaultlib -L secureip --snapshot hamming_decoder_tb_behav xil_defaultlib.hamming_decoder_tb" , 
+    cmdline : " --incr --debug typical --relax --mt 8 -L xil_defaultlib -L secureip --snapshot hamming_decoder_tb_behav xil_defaultlib.hamming_decoder_tb" , 
     buildDate : "May  7 2023" , 
-    buildTime : "15:24:31" , 
-    linkCmd : "C:\\Xilinx\\Vivado\\2023.1\\data\\..\\tps\\mingw\\6.2.0\\win64.o\\nt\\bin\\gcc.exe -Wa,-W  -O -Wl,--stack,104857600 -o \"xsim.dir/hamming_decoder_tb_behav/xsimk.exe\"   \"xsim.dir/hamming_decoder_tb_behav/obj/xsim_0.win64.obj\" \"xsim.dir/hamming_decoder_tb_behav/obj/xsim_1.win64.obj\" -L\"C:\\Xilinx\\Vivado\\2023.1\\lib\\win64.o\" -lrdi_simulator_kernel   -lrdi_simbridge_kernel" , 
+    buildTime : "15:10:42" , 
+    linkCmd : "/usr/bin/gcc -Wa,-W  -O -fPIC  -m64  -Wl,--no-as-needed  -Wl,--unresolved-symbols=ignore-all  -o \"xsim.dir/hamming_decoder_tb_behav/xsimk\"   \"xsim.dir/hamming_decoder_tb_behav/obj/xsim_0.lnx64.o\" \"xsim.dir/hamming_decoder_tb_behav/obj/xsim_1.lnx64.o\" -L\"/home/hrh/Xilinx/Vivado/2023.1/lib/lnx64.o\" -lrdi_simulator_kernel    -L/home/hrh/Xilinx/Vivado/2023.1/lib/lnx64.o/../../tps/lnx64/gcc-9.3.0/bin/../lib64 -Wl,--disable-new-dtags -Wl,-rpath=/home/hrh/Xilinx/Vivado/2023.1/lib/lnx64.o/../../tps/lnx64/gcc-9.3.0/bin/../lib64 -lrdi_simbridge_kernel" , 
     aggregate_nets : 
     [ 
     ] 

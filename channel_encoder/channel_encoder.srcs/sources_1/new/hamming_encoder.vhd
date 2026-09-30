@@ -60,7 +60,9 @@ begin
         output_data <= frame;
         ready       <= '1';
       else
-        ready <= '0';
+        -- Clear after the one-clock ready pulse so stale data can't leak into the next set
+        output_data <= (others => '0');
+        ready       <= '0';
       end if;
     end if;
   end process;

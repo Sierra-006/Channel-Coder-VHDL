@@ -30,7 +30,6 @@ architecture Behavioral of hamming_testbench is
   signal dec_dout      : STD_LOGIC_VECTOR(7 downto 0);
   signal dec_detect    : STD_LOGIC;
   signal dec_corrected : STD_LOGIC;
-  signal dec_uncorr    : STD_LOGIC;
   signal dec_ready     : STD_LOGIC;
 
 begin
@@ -54,7 +53,6 @@ begin
       data_out            => dec_dout,
       error_detect        => dec_detect,
       error_corrected     => dec_corrected,
-      uncorrectable_error => dec_uncorr,
       ready_out           => dec_ready
     );
 
@@ -97,7 +95,7 @@ begin
           errors := errors + 1;
         end if;
       else
-        if dec_detect /= '1' or dec_corrected /= '1' or dec_uncorr /= '0' then
+        if dec_detect /= '1' or dec_corrected /= '1' then
           report "single error flags wrong, errbit=" & integer'image(mask_bit) severity error;
           errors := errors + 1;
         end if;
